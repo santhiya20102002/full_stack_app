@@ -1,0 +1,8 @@
+# Ignore node_modules in both client and server directories
+client/node_modules/
+server/node_modules/
+
+# Optional: Ignore other files/folders you don't need to push
+.env            # Ignore environment variables file (if exists)
+.DS_Store       # Ignore macOS system files (if you're on macOS)
+*.log           # Ignore log files
