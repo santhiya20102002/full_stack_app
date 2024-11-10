@@ -117,42 +117,46 @@ const MarkImage = () => {
     setDragging(true); // Set dragging to true when drag starts
   };
 
-  const handleDragEnd = (e, shape) => {
-    setDragging(false); // Reset dragging to false when drag ends
+const handleDragEnd = (e, shape) => {
+  setDragging(false); // Reset dragging to false when drag ends
 
-    if (shape.type === "circle") {
-      // For circle, we need to ensure that the entire circle stays within the image bounds
-      const radius = shape.radius;
-      const x = Math.max(radius, Math.min(imgWidth - radius, e.target.x())); // Prevent going beyond the image width
-      const y = Math.max(radius, Math.min(imgHeight - radius, e.target.y())); // Prevent going beyond the image height
+  const node = e.target; // Get the Konva node of the dragged shape
 
-      const updatedShapes = shapes.map((s) =>
-        s.id === shape.id
-          ? {
-              ...s,
-              x, // Constrained x position
-              y, // Constrained y position
-            }
-          : s
-      );
-      setShapes(updatedShapes);
-    } else if (shape.type === "rectangle") {
-      // For rectangle, the logic stays the same as before
-      const x = Math.max(0, Math.min(imgWidth - shape.width, e.target.x())); // Prevent going beyond the image width
-      const y = Math.max(0, Math.min(imgHeight - shape.height, e.target.y())); // Prevent going beyond the image height
+  if (shape.type === "circle") {
+    const radius = shape.radius;
 
-      const updatedShapes = shapes.map((s) =>
-        s.id === shape.id
-          ? {
-              ...s,
-              x, // Constrained x position
-              y, // Constrained y position
-            }
-          : s
-      );
-      setShapes(updatedShapes);
-    }
-  };
+    // Constrain the circle within the image's bounds
+    const x = Math.max(radius, Math.min(imgWidth - radius, node.x())); // Prevent the circle from going beyond the image's width
+    const y = Math.max(radius, Math.min(imgHeight - radius, node.y())); // Prevent the circle from going beyond the image's height
+
+    const updatedShapes = shapes.map((s) =>
+      s.id === shape.id
+        ? {
+            ...s,
+            x, // Constrained x position
+            y, // Constrained y position
+          }
+        : s
+    );
+    setShapes(updatedShapes);
+  } else if (shape.type === "rectangle") {
+    // Constrain the rectangle within the image's bounds
+    const x = Math.max(0, Math.min(imgWidth - shape.width, node.x())); // Prevent going beyond the image's width
+    const y = Math.max(0, Math.min(imgHeight - shape.height, node.y())); // Prevent going beyond the image's height
+
+    const updatedShapes = shapes.map((s) =>
+      s.id === shape.id
+        ? {
+            ...s,
+            x, // Constrained x position
+            y, // Constrained y position
+          }
+        : s
+    );
+    setShapes(updatedShapes);
+  }
+};
+
 
   // When transformer starts resizing, set resizing flag to true
   const handleTransformStart = () => {
@@ -167,34 +171,27 @@ const MarkImage = () => {
         const node = shapeRefs.current[s.id]; // Get the Konva node for the selected shape
   
         if (s.type === "circle") {
-          // Get the current position of the circle (its center)
-          let newX = node.x();
-          let newY = node.y();
-          const originalRadius = s.radius;
-  
-          // Get the scale factors and rotation angle (to be used for resizing)
           const scaleX = node.scaleX();
           const scaleY = node.scaleY();
   
-          // Compute the new radius after scaling
+          const originalRadius = s.radius;
           let newRadius = originalRadius * Math.min(scaleX, scaleY);
           newRadius = Math.max(newRadius, 5); // Prevent the circle from becoming too small
   
-          // Ensure the circle's center stays within bounds after resizing
-          newX = Math.max(newRadius, Math.min(imgWidth - newRadius, newX));
-          newY = Math.max(newRadius, Math.min(imgHeight - newRadius, newY));
-  
-          // Apply the calculated transformations to the shape
+          // Reset scale and rotation after transformation
           node.scaleX(1); // Reset scaleX after applying it manually
           node.scaleY(1); // Reset scaleY after applying it manually
-          node.rotation(0); // Reset rotation for correct future scaling
+          node.rotation(0); // Reset rotation to zero for the future transformations
   
-          // Return the updated circle with new radius and position
+          // The center of the circle should stay at the same position
+          const newX = node.x();
+          const newY = node.y();
+  
           return {
             ...s,
-            x: newX,        // Apply the constrained x position
-            y: newY,        // Apply the constrained y position
-            radius: newRadius, // Update the radius
+            x: newX,           // Keep the same center X position
+            y: newY,           // Keep the same center Y position
+            radius: newRadius, // Update the radius with the new size
           };
         } else {
           // For other shapes (like rectangles), apply similar logic
@@ -214,6 +211,7 @@ const MarkImage = () => {
   
     setShapes(updatedShapes); // Update the shapes array with transformed shapes
   };
+  
   
   
   
