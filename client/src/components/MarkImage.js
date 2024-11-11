@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Stage, Layer, Rect, Circle, Image as KonvaImage, Transformer } from "react-konva";
 import axios from "axios";
-import parachuteImage from "./parachute.jpg"; // Your static image
-import { toast, ToastContainer } from "react-toastify"; // Import toastify
-import "react-toastify/dist/ReactToastify.css"; // Import the CSS
+import parachuteImage from "./parachute.jpg";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import Modal from "react-modal";
+import './MarkImage.css';
 
 const MarkImage = () => {
   const [shapes, setShapes] = useState([]); // Store all shapes
@@ -13,6 +15,7 @@ const MarkImage = () => {
   const [dragging, setDragging] = useState(false); // State to track if a shape is being dragged
   const [transforming, setTransforming] = useState(false); // Track if transformer is active
   const [selectedShape, setSelectedShape] = useState(null); // Store the selected shape for transformer
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false); // State for preview modal
   const transformerRef = useRef(null);
   const shapeRefs = useRef({});
   const imgRef = useRef(null);
@@ -20,13 +23,11 @@ const MarkImage = () => {
   const stageWidth = window.innerWidth;
   const stageHeight = window.innerHeight;
 
-  // Calculate the image size to be 90% of the page size
-  const imgWidth = Math.floor(stageWidth); // 90% of the page width
-  const imgHeight = Math.floor(stageHeight); // 90% of the page height
+  const imgWidth = Math.floor(stageWidth);
+  const imgHeight = Math.floor(stageHeight);
 
-  // Center the image on the stage
-  const imgX = (stageWidth - imgWidth) / 2; // Center the image horizontally
-  const imgY = (stageHeight - imgHeight) / 2; // Center the image vertically
+  const imgX = (stageWidth - imgWidth) / 2;
+  const imgY = (stageHeight - imgHeight) / 2;
 
   useEffect(() => {
     const img = new window.Image();
@@ -36,11 +37,10 @@ const MarkImage = () => {
 
   // Start drawing a new shape (rectangle or circle)
   const startDrawing = (e) => {
-    if (dragging || transforming) return; // Prevent starting a new shape if dragging or transforming is active
+    if (dragging || transforming) return;
 
     const pos = e.target.getStage().getPointerPosition();
 
-    // Initialize currentShape for rectangle or circle
     const newShape = {
       id: Date.now(),
       type: shapeType,
@@ -48,52 +48,46 @@ const MarkImage = () => {
       y: pos.y,
       width: 0,
       height: 0,
-      radius: shapeType === "circle" ? 0 : 0, // Start with a zero radius for circle
+      radius: shapeType === "circle" ? 0 : 0,
       color: "blue",
       selected: false,
     };
-    setCurrentShape(newShape); // Set current shape for drawing
+    setCurrentShape(newShape);
   };
 
-  // Handle drawing as mouse moves (for resizing and circle updates)
   const handleDraw = (e) => {
-    if (dragging || transforming || !currentShape) return; // Prevent drawing if dragging or transforming is active
+    if (dragging || transforming || !currentShape) return;
 
     const pos = e.target.getStage().getPointerPosition();
 
     if (currentShape.type === "rectangle") {
-      // Prevent the rectangle from going beyond the image size
-      const width = Math.min(imgWidth - currentShape.x, pos.x - currentShape.x); // Prevent exceeding the image width
-      const height = Math.min(imgHeight - currentShape.y, pos.y - currentShape.y); // Prevent exceeding the image height
+      const width = Math.min(imgWidth - currentShape.x, pos.x - currentShape.x);
+      const height = Math.min(imgHeight - currentShape.y, pos.y - currentShape.y);
       setCurrentShape({
         ...currentShape,
         width,
         height,
       });
     } else if (currentShape.type === "circle") {
-      // Calculate radius for the circle (distance from the center to the current mouse position)
       const radius = Math.sqrt(Math.pow(pos.x - currentShape.x, 2) + Math.pow(pos.y - currentShape.y, 2));
-      // Ensure that the radius is non-negative
       setCurrentShape({
         ...currentShape,
-        radius: Math.max(radius, 0), // Ensure radius is non-negative
+        radius: Math.max(radius, 0),
       });
     }
   };
 
-  // End drawing the shape (save it to the state)
   const endDrawing = () => {
-    if (dragging || transforming || !currentShape) return; // Prevent drawing if dragging or transforming is active
+    if (dragging || transforming || !currentShape) return;
 
-    setShapes([...shapes, currentShape]); // Add completed shape to shapes array
-    setCurrentShape(null); // Reset current shape after drawing is finished
+    setShapes([...shapes, currentShape]);
+    setCurrentShape(null);
   };
 
-  // Handle selecting a shape (clicking on it)
   const selectShape = (shape, e) => {
-    if (dragging || transforming) return; // Prevent selection while dragging or transforming
+    if (dragging || transforming) return;
 
-    setSelectedShape(shape); // Set the selected shape for transformer
+    setSelectedShape(shape);
     setShapes(
       shapes.map((s) =>
         s.id === shape.id ? { ...s, selected: !s.selected } : s
@@ -101,50 +95,46 @@ const MarkImage = () => {
     );
   };
 
-  // Delete selected shape
   const deleteShape = () => {
-    const newShapes = shapes.filter((shape) => !shape.selected); // Remove selected shape
+    const newShapes = shapes.filter((shape) => !shape.selected);
     setShapes(newShapes);
     setSelectedShape(null);
   };
 
   const handleDragStart = () => {
-    setDragging(true); // Set dragging to true when drag starts
+    setDragging(true);
   };
 
   const handleDragEnd = (e, shape) => {
-    setDragging(false); // Reset dragging to false when drag ends
+    setDragging(false);
 
-    const node = e.target; // Get the Konva node of the dragged shape
+    const node = e.target;
 
     if (shape.type === "circle") {
       const radius = shape.radius;
-
-      // Constrain the circle within the image's bounds
-      const x = Math.max(radius, Math.min(imgWidth - radius, node.x())); // Prevent the circle from going beyond the image's width
-      const y = Math.max(radius, Math.min(imgHeight - radius, node.y())); // Prevent the circle from going beyond the image's height
+      const x = Math.max(radius, Math.min(imgWidth - radius, node.x()));
+      const y = Math.max(radius, Math.min(imgHeight - radius, node.y()));
 
       const updatedShapes = shapes.map((s) =>
         s.id === shape.id
           ? {
             ...s,
-            x, // Constrained x position
-            y, // Constrained y position
+            x,
+            y,
           }
           : s
       );
       setShapes(updatedShapes);
     } else if (shape.type === "rectangle") {
-      // Constrain the rectangle within the image's bounds
-      const x = Math.max(0, Math.min(imgWidth - shape.width, node.x())); // Prevent going beyond the image's width
-      const y = Math.max(0, Math.min(imgHeight - shape.height, node.y())); // Prevent going beyond the image's height
+      const x = Math.max(0, Math.min(imgWidth - shape.width, node.x()));
+      const y = Math.max(0, Math.min(imgHeight - shape.height, node.y()));
 
       const updatedShapes = shapes.map((s) =>
         s.id === shape.id
           ? {
             ...s,
-            x, // Constrained x position
-            y, // Constrained y position
+            x,
+            y,
           }
           : s
       );
@@ -152,43 +142,38 @@ const MarkImage = () => {
     }
   };
 
-  // When transformer starts resizing, set resizing flag to true
   const handleTransformStart = () => {
-    setTransforming(true); // Mark transformer as active
+    setTransforming(true);
   };
 
   const handleTransformEnd = () => {
-    setTransforming(false); // Mark transformer as inactive
+    setTransforming(false);
 
     const updatedShapes = shapes.map((s) => {
       if (s.id === selectedShape.id) {
-        const node = shapeRefs.current[s.id]; // Get the Konva node for the selected shape
+        const node = shapeRefs.current[s.id];
 
         if (s.type === "circle") {
           const scaleX = node.scaleX();
           const scaleY = node.scaleY();
-
           const originalRadius = s.radius;
           let newRadius = originalRadius * Math.min(scaleX, scaleY);
-          newRadius = Math.max(newRadius, 5); // Prevent the circle from becoming too small
+          newRadius = Math.max(newRadius, 5);
 
-          // Reset scale and rotation after transformation
-          node.scaleX(1); // Reset scaleX after applying it manually
-          node.scaleY(1); // Reset scaleY after applying it manually
-          node.rotation(0); // Reset rotation to zero for the future transformations
+          node.scaleX(1);
+          node.scaleY(1);
+          node.rotation(0);
 
-          // The center of the circle should stay at the same position
           const newX = node.x();
           const newY = node.y();
 
           return {
             ...s,
-            x: newX,           // Keep the same center X position
-            y: newY,           // Keep the same center Y position
-            radius: newRadius, // Update the radius with the new size
+            x: newX,
+            y: newY,
+            radius: newRadius,
           };
         } else {
-          // For other shapes (like rectangles), apply similar logic
           const width = Math.min(imgWidth - node.x(), node.width());
           const height = Math.min(imgHeight - node.y(), node.height());
           return {
@@ -203,10 +188,9 @@ const MarkImage = () => {
       return s;
     });
 
-    setShapes(updatedShapes); // Update the shapes array with transformed shapes
+    setShapes(updatedShapes);
   };
 
-  // Submit coordinates to the backend
   const handleSubmit = async () => {
     const coordinates = {};
 
@@ -214,24 +198,21 @@ const MarkImage = () => {
       const areaLabel = `Area${index + 1}`;
 
       if (shape.type === 'rectangle') {
-        // For rectangles, we calculate the coordinates of the top-left corner and dimensions
         coordinates[areaLabel] = [
           [shape.x, shape.y],
           [shape.x + shape.width, shape.y + shape.height],
         ];
       } else if (shape.type === 'circle') {
-        // For circles, we store the center coordinates and radius
         coordinates[areaLabel] = [
-          [shape.x, shape.y], // Center point
-          shape.radius, // Radius
+          [shape.x, shape.y],
+          shape.radius,
         ];
       }
     });
 
-    // Check if coordinates are empty
     if (Object.keys(coordinates).length === 0) {
       toast.error("Please add at least one shape before submitting.");
-      return; // Exit the function if no shapes are added
+      return;
     }
 
     try {
@@ -246,6 +227,10 @@ const MarkImage = () => {
     }
   };
 
+  // Toggle the preview modal
+  const togglePreview = () => {
+    setIsPreviewOpen(!isPreviewOpen);
+  };
 
   return (
     <div>
@@ -254,8 +239,11 @@ const MarkImage = () => {
         <button onClick={() => setShapeType("rectangle")}>Draw Rectangle</button>
         <button onClick={() => setShapeType("circle")}>Draw Circle</button>
         <button onClick={deleteShape}>Delete Selected Shape</button>
+        <button onClick={togglePreview}>Preview</button>
         <button onClick={handleSubmit}>Submit Coordinates</button>
+
       </div>
+      
       <Stage
         width={stageWidth}
         height={stageHeight}
@@ -269,12 +257,11 @@ const MarkImage = () => {
               image={image}
               width={imgWidth}
               height={imgHeight}
-              x={imgX} // Center the image horizontally
-              y={imgY} // Center the image vertically
+              x={imgX}
+              y={imgY}
               ref={imgRef}
             />
           )}
-
           {shapes.map((shape) => {
             if (shape.type === "rectangle") {
               return (
@@ -320,7 +307,6 @@ const MarkImage = () => {
                 />
               );
             }
-
             return null;
           })}
           {selectedShape && (
@@ -331,6 +317,55 @@ const MarkImage = () => {
           )}
         </Layer>
       </Stage>
+
+      {/* Preview Modal */}
+      <Modal isOpen={isPreviewOpen} onRequestClose={togglePreview} contentLabel="Preview Modal">
+        <h2>Preview</h2>
+        <button className="modal-close-button" onClick={togglePreview}>
+        &times;
+        </button> 
+        <Stage width={imgWidth} height={imgHeight}>
+          <Layer>
+            {image && (
+              <KonvaImage
+                image={image}
+                width={imgWidth}
+                height={imgHeight}
+                x={imgX}
+                y={imgY}
+              />
+            )}
+            {shapes.map((shape) => {
+              if (shape.type === "rectangle") {
+                return (
+                  <Rect
+                    key={shape.id}
+                    x={shape.x}
+                    y={shape.y}
+                    width={shape.width}
+                    height={shape.height}
+                    fill="transparent"
+                    stroke="blue"
+                  />
+                );
+              }
+              if (shape.type === "circle") {
+                return (
+                  <Circle
+                    key={shape.id}
+                    x={shape.x}
+                    y={shape.y}
+                    radius={shape.radius}
+                    fill="transparent"
+                    stroke="blue"
+                  />
+                );
+              }
+              return null;
+            })}
+          </Layer>
+        </Stage>
+      </Modal>
     </div>
   );
 };
