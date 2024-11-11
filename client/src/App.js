@@ -1,6 +1,5 @@
-import logo from './logo.svg';
 import './App.css';
-import MarkImage from './MarkImage';
+import MarkImage from '../src/components/MarkImage';
  
 
 function App() {
