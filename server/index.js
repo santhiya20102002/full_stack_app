@@ -1,29 +1,28 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const { Client } = require('pg'); // PostgreSQL client
-
+const { Client } = require('pg');
 const app = express();
 const port = 5000;
 
 // Database client setup
 const client = new Client({
-  user: 'postgres', // replace with your PostgreSQL username
+  user: 'postgres',
   host: 'localhost',
-  database: 'image_marks', // replace with your PostgreSQL database name
-  password: '2002', // replace with your PostgreSQL password
+  database: 'image_marks',
+  password: '2002',
   port: 5432,
 });
 
 client.connect();
 
-app.use(cors()); // Enable Cross-Origin Resource Sharing
-app.use(bodyParser.json()); // Parse incoming JSON requests
+app.use(cors()); 
+app.use(bodyParser.json()); 
 
 // Endpoint to save coordinates
 app.post('/api/marks', async (req, res) => {
   const { coordinates } = req.body;
-  const imageName = 'parachute.jpg'; // You can use dynamic image names if needed
+  const imageName = 'parachute.jpg';
 
   try {
     // Insert the coordinates into the database
